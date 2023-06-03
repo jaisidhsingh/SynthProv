@@ -45,7 +45,7 @@ def run_synthprov(cfg):
 		comp2synths_id_scores = comps2synths_id_scores[i]
 
 		# get our assistants
-		assistant_indices, assistant_embeddings = select_assistants(
+		assistant_indices = select_assistants(
 			cfg,
 			parent_indices,
 			comp2synths_id_scores,
@@ -53,22 +53,28 @@ def run_synthprov(cfg):
 		)
 
 		# get the clusters/families from the assistants
-		clusters = get_clusters(
-			cfg,
-			parent_indices,
-			parent_embeddings,
-			assistant_indices,
-			assistant_embeddings
-		)
+		# clusters = get_clusters(
+		# 	cfg,
+		# 	parent_indices,
+		# 	parent_embeddings,
+		# 	assistant_indices,
+		# 	assistant_embeddings
+		# )
 
 		# get our mixed scores
+		# scores = get_scores(
+		# 	cfg,
+		# 	clusters,
+		# 	synths2reals_id_scores,
+		# 	synths2reals_gan_scores
+		# )
 		scores = get_scores(
 			cfg,
-			clusters,
+			parent_indices,
+			assistant_indices.tolist(),
 			synths2reals_id_scores,
 			synths2reals_gan_scores
 		)
-
 		# store the scores
 		store[i] = scores
 		
@@ -180,7 +186,7 @@ def main(cfg):
 	)
 	major_qualitative(
 		cfg,
-		naive_matching_results['majors']['indices'],
+		naive_matching_results['major']['indices'],
 		nm_major_save_path
 	)
 

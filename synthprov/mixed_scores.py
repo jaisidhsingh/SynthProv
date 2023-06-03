@@ -1,6 +1,6 @@
 import torch
 
-
+"""
 # construct our mixed scores using the families made in the previous step
 def get_scores(cfg, clusters, synths2reals_id_scores, synths2reals_gan_scores):
 	# get number of reals
@@ -12,7 +12,7 @@ def get_scores(cfg, clusters, synths2reals_id_scores, synths2reals_gan_scores):
 		families.append([clusters[i]["parent_index"]] + clusters[i]["others_indices"])
 
 	# make a holder for the cumulative family scores
-	global_scores = torch.zeros((cfg.k, num_reals))
+	global_scores = torch.zeros((cfg.k, num_reals)).float()
         
 	# iterate over families and make mixed scores
 	for i in range(cfg.k):
@@ -26,15 +26,30 @@ def get_scores(cfg, clusters, synths2reals_id_scores, synths2reals_gan_scores):
 			mixed_scores = id_scores * gan_scores
 
 		# cumulate them locally (or within each family) according to how we want
-		cum_mixed_scores = cfg.cumulate_mode["family"](mixed_scores, dim=0)
+		cum_mixed_scores, _ = cfg.cumulate_mode["family"](mixed_scores, dim=0)
 		global_scores[i] = cum_mixed_scores
 
 	# cumulate them globally according to how we want
 	final_scores = cfg.cumulate_mode["global"](global_scores, dim=0)
 
 	return final_scores
-	
-		
-		
-        
+"""	
+ 
+# construct our mixed scores using the families made in the previous step
+def get_scores(cfg, parent_indices, assistant_indices, synths2reals_id_scores, synths2reals_gan_scores):
+	# get number of reals
+	num_reals = synths2reals_id_scores.shape[1]
+
+	my_team = parent_indices + assistant_indices
+	id_scores = synths2reals_id_scores[my_team]
+	gan_scores = synths2reals_gan_scores[my_team]
+
+	if cfg.version == 1:
+		mixed_scores = id_scores + 0.3 * gan_scores
+	elif cfg.version == 2:
+		mixed_scores = id_scores * gan_scores
+	# cumulate them globally according to how we want
+	final_scores = mixed_scores.mean(dim=0)
+
+	return final_scores       
     

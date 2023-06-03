@@ -24,7 +24,7 @@ def select_assistants(cfg, parent_indices, comp2synths_id_scores, synthetic_embe
 	this is done to use the identity representatives of the composite without using 
 	the composite itself in the retrieval (different from direct matchng) 
 	"""
-	num_synths = comp2synths_id_scores.shape[1]
+	num_synths = len(comp2synths_id_scores)
 
 	non_parent_indices = list(set([i for i in range(num_synths)]) - set(parent_indices))
 	threshold = min(comp2synths_id_scores[parent_indices].tolist())
@@ -33,9 +33,9 @@ def select_assistants(cfg, parent_indices, comp2synths_id_scores, synthetic_embe
 	participant_scores = comp2synths_id_scores[participant_indices]
 
 	assistant_scores, assistant_indices = participant_scores.topk(k=cfg.num_assistants, largest=False, dim=-1)
-	assistant_embeddings = synthetic_embeddings[participant_indices][assistant_indices]
+	# assistant_embeddings = synthetic_embeddings[participant_indices][assistant_indices]
 
-	return assistant_indices, assistant_embeddings
+	return assistant_indices #, assistant_embeddings
 
 
 def get_clusters(cfg, parent_indices, parent_embeddings, assistant_indices, assistant_embeddings):
@@ -61,7 +61,7 @@ def get_clusters(cfg, parent_indices, parent_embeddings, assistant_indices, assi
 		parent_idx = int(minned[i])
 
 		if cluster_dict[parent_idx]["others_count"] < cfg.parent_cluster_size:
-			cluster_dict[parent_idx]["others_indices"].append(assistant_indices[i])
+			cluster_dict[parent_idx]["others_indices"].append(int(assistant_indices[i]))
 			cluster_dict[parent_idx]["others_count"] += 1
 
 	return cluster_dict 

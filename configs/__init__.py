@@ -15,17 +15,17 @@ configs.matcher = "ElasticArcFace+"
 configs.k = 2
 
 # number of composites to operate on
-configs.iterations = 10
+configs.iterations = 3
 
 # how to use GAN space in our algorithm
-configs.gan_score_mode = "projected"
+configs.gan_score_mode = "unprojected"
 configs.cumulate_mode = {
     "global": torch.mean,
     "family":  torch.min
 }
 
 # qualitative result configs
-configs.qualitative_topk = 10
+configs.qualitative_topk = 5
 configs.qualitative_queries = [0, 1, 2]
 
 # save configs
@@ -43,7 +43,7 @@ configs.parents_list_path = f"{configs.homefolder}/synthetic/data/parents_{confi
 # id space configs
 configs.composite_embeddings_path = f"{configs.homefolder}/synthetic/embeddings/{configs.matcher}/embeddings_{configs.k}.pt"
 configs.synthetic_embeddings_path = f"{configs.homefolder}/synthetic/embeddings/{configs.matcher}/embeddings_sources.pt"
-configs.real_embeddings_path = f"{configs.matcher}/real/embeddings/{configs.matcher}/embeddings_sources.pt"
+configs.real_embeddings_path = f"{configs.homefolder}/real/embeddings/{configs.matcher}/embeddings_sources.pt"
 
 # gan space configs
 configs.synthetic_latents_path = f"{configs.homefolder}/synthetic/synthetic_source_latents.pt"

@@ -23,19 +23,19 @@ def get_all_real_paths(cfg):
 				path = os.path.join(cfg.real_image_folder, subdir, fname)
 				all_paths.append(path)
 		
-		return all_paths
+		return sorted(all_paths)
 
 	elif cfg.dataset == "celebahq":
 		all_paths = [os.path.join(cfg.real_image_folder, fname) for fname in os.listdir(cfg.real_image_folder)]
-		return all_paths
+		return sorted(all_paths)
 
 def get_all_composite_paths(cfg):
 	all_paths = [os.path.join(cfg.composite_image_folder, fname) for fname in os.listdir(cfg.composite_image_folder)]
-	return all_paths
+	return sorted(all_paths)
 
 def get_all_synthetic_paths(cfg):
 	all_paths = [os.path.join(cfg.synthetic_image_folder, fname) for fname in os.listdir(cfg.synthetic_image_folder)]
-	return all_paths
+	return sorted(all_paths)
 
 def query_qualitative(cfg, donor_list, save_path):
 	comp_paths = get_all_composite_paths(cfg)
@@ -49,6 +49,8 @@ def query_qualitative(cfg, donor_list, save_path):
 
 		img_paths = [q_path] + d_paths
 		imgs = [Image.open(path).convert('RGB') for path in img_paths]
+		imgs = [img.resize((100, 100)) for img in imgs]
+
 		tmp = imgs[0]
 		for j in range(1, len(imgs)):
 			tmp = get_concat_h(tmp, imgs[j])
@@ -65,7 +67,8 @@ def major_qualitative(cfg, donor_list, save_path):
 	real_paths = get_all_real_paths(cfg)
 	img_paths = [real_paths[idx] for idx in donor_list]
 	imgs = [Image.open(path).convert('RGB') for path in img_paths]
-
+	imgs = [img.resize((100, 100)) for img in imgs]
+	
 	tmp = imgs[0]
 	for i in range(1, len(imgs)):
 		tmp = get_concat_h(tmp, imgs[i])
@@ -76,28 +79,29 @@ def write_report(cfg, report_path, synthprov_results, naive_matching_results):
 	with open(report_path, "w") as f:
 		f.writelines(
 			[
-				f"Experiment name: {cfg.num_name}"
-				f"---------------------------------------",
-				"  ",
-				"  ",
-				f"SynthProv results:",
-				f"--- Real images leaking identity into composites {cfg.qualitative_queries}: ",
-				f"------- Indices of real images: {synthprov_results['queries']['indices']}"
-				f"------- Scores of real images: {synthprov_results['queries']['scores']}"
-				" ",
-				f"--- Real images leaking identity into all composites (major donors):",
-				f"------- Indices of real images: {synthprov_results['major']['indices']}",
-				f"------- Scores of real images: {synthprov_results['major']['scores']}",
-				"  ",
-				"  ",
-				f"Naive Matching results:",
-				f"--- Real images naively matching to composites {cfg.qualitative_queries}: ",
-				f"------- Indices of real images: {naive_matching_results['queries']['indices']}"
-				f"------- Scores of real images: {naive_matching_results['queries']['scores']}"
-				" ",
-				f"--- Real images acting as naive major donors for all synthetics (major donors):",
-				f"------- Indices of real images: {naive_matching_results['major']['indices']}",
-				f"------- Scores of real images: {naive_matching_results['major']['scores']}",
+				f"Experiment name: {cfg.run_name} \n",
+				f"Number of composites used for this experiment: {cfg.iterations} \n",
+				f"-------------------------------------------------------------------- \n",
+				"  \n",
+				"  \n",
+				f"SynthProv results: \n",
+				f"--- Real images leaking identity into composites {cfg.qualitative_queries}: \n",
+				f"------- Indices of real images: {synthprov_results['queries']['indices']} \n"
+				f"------- Scores of real images: {synthprov_results['queries']['scores']} \n"
+				" \n",
+				f"--- Real images leaking identity into all composites (major donors): \n",
+				f"------- Indices of real images: {synthprov_results['major']['indices']} \n",
+				f"------- Scores of real images: {synthprov_results['major']['scores']} \n",
+				"  \n",
+				"  \n",
+				f"Naive Matching results: \n",
+				f"--- Real images naively matching to composites {cfg.qualitative_queries}: \n",
+				f"------- Indices of real images: {naive_matching_results['queries']['indices']} \n"
+				f"------- Scores of real images: {naive_matching_results['queries']['scores']} \n"
+				" \n",
+				f"--- Real images acting as naive major donors for all synthetics (major donors): \n",
+				f"------- Indices of real images: {naive_matching_results['major']['indices']} \n",
+				f"------- Scores of real images: {naive_matching_results['major']['scores']} \n",
 			]
 		)
 	print(f"Report generated at: {report_path}")

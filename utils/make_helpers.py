@@ -1,5 +1,6 @@
 import os
 import torch
+from tqdm import tqdm
 
 
 # set up types of dissimilarity score per matcher
@@ -9,7 +10,8 @@ def cosine_distance(f1, f2):
 
 def euclidean_distance(f1, f2):
     f1, f2 = f1.T / torch.norm(f1, dim=1), f2.T/torch.norm(f2, dim=1)
-    f1, f2 = f1.T.cpu(), f2.T.cpu()
+    # f1, f2 = f1.T.cpu(), f2.T.cpu()
+    f1, f2 = f1.T, f2.T
     return torch.cdist(f1.unsqueeze(0), f2.unsqueeze(0)).squeeze(0)
 
 def id_comparison_score(cfg, f1, f2):
@@ -57,8 +59,8 @@ def make_unprojected_gan_scores(cfg):
 		synth_latents = torch.load(cfg.synthetic_latents_path)
 		real_latents = torch.load(cfg.real_latents_path)
 
-		synth_latents = synth_latents.view((synth_latents.shape[0], -1))
-		real_latents = real_latents.view((real_latents.shape[0], -1))
+		synth_latents = synth_latents.view((synth_latents.shape[0], -1)).cpu()
+		real_latents = real_latents.view((real_latents.shape[0], -1)).cpu()
 
 		synths2reals_gan_scores = euclidean_distance(synth_latents, real_latents)
 		torch.save(synths2reals_gan_scores, save_paths[0])
@@ -75,23 +77,40 @@ def make_projected_gan_scores(cfg):
 		return save_paths
 	
 	else:
-		synth_latents = torch.load(cfg.synthetic_latents_path)
-		real_latents = torch.load(cfg.real_latents_path)
-		id_direction = torch.load(cfg.id_direction_path)
+		synth_latents = torch.load(cfg.synthetic_latents_path).cpu()
+		real_latents = torch.load(cfg.real_latents_path).cpu()
+		id_direction = torch.load(cfg.id_direction_path).cpu()
 
-		vectors = synth_latents.unsqueeze(1) - real_latents.unsqueeze(0)
-		vectors = vectors.view((synth_latents.shape[0], real_latents.shape[0], -1))
+		store = torch.zeros((synth_latents.shape[0], real_latents.shape[0]))
+		costhetas = torch.zeros((synth_latents.shape[0], real_latents.shape[0]))
 
-		costheta = (vectors @ id_direction.view((1, -1)).T) / (vectors.norm(2) * id_direction.norm(2))
-		costheta = costheta.squeeze(2)
+		old_i = 0
+		step = 10	
+		for i in tqdm(range(step, synth_latents.shape[0]+1, step)):
+			iis = [x for x in range(old_i, i)]
+			synth_latent = synth_latents[iis].view((step, 18, 512))
 
-		synth_latents = synth_latents.view((synth_latents.shape[0], -1))
-		real_latents = real_latents.view((real_latents.shape[0], -1))
-		distances = euclidean_distance(synth_latents, real_latents)
-		projected_distance = distances * costheta
+			vectors = synth_latent.unsqueeze(1) - real_latents.unsqueeze(0)
+			vectors = vectors.view((synth_latent.shape[0], real_latents.shape[0], -1))
 
-		torch.save(projected_distance, save_paths[0])
-		torch.save(costheta, save_paths[1])
+			costheta = (vectors @ id_direction.view((1, -1)).T) / (vectors.norm(2) * id_direction.norm(2))
+			costheta = costheta.squeeze(2)
+
+			synth_latent = synth_latent.view((synth_latent.shape[0], -1))
+			real_latents = real_latents.view((real_latents.shape[0], -1))
+
+			distances = euclidean_distance(synth_latent.cuda(), real_latents.cuda())
+			projected_distance = distances.cuda() * costheta.cuda()
+
+			store[iis] = projected_distance.cpu()
+			costhetas[iis] = costheta.cpu()
+
+			real_latents = real_latents.view((70000, 18, 512))
+
+			old_i += step
+
+		torch.save(store, save_paths[0])
+		torch.save(costhetas, save_paths[1])
 
 		return save_paths
 
