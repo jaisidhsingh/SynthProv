@@ -12,7 +12,7 @@ def euclidean_distance(f1, f2):
     return torch.cdist(f1.unsqueeze(0), f2.unsqueeze(0)).squeeze(0)
 
 def id_comparison_score(cfg, f1, f2):
-    if cfg.matcher in ["ElasticArcFace+", "FaceNet"]:
+    if cfg.matcher in ["ElasticFace", "FaceNet"]:
         return euclidean_distance(f1, f2)
     else:
         return cosine_distance(f1, f2)
@@ -32,10 +32,11 @@ def select_assistants(cfg, parent_indices, comp2synths_id_scores, synthetic_embe
 	participant_indices = [j for j in non_parent_indices if comp2synths_id_scores[j] <= threshold]
 	participant_scores = comp2synths_id_scores[participant_indices]
 
-	assistant_scores, assistant_indices = participant_scores.topk(k=cfg.num_assistants, largest=False, dim=-1)
-	# assistant_embeddings = synthetic_embeddings[participant_indices][assistant_indices]
+	to_take = min(cfg.num_assistants, len(participant_indices))
+	assistant_scores, assistant_indices = participant_scores.topk(k=to_take, largest=False, dim=-1)
+	assistant_embeddings = synthetic_embeddings[participant_indices][assistant_indices]
 
-	return assistant_indices #, assistant_embeddings
+	return torch.tensor(participant_indices)[assistant_indices].tolist() , assistant_embeddings
 
 
 def get_clusters(cfg, parent_indices, parent_embeddings, assistant_indices, assistant_embeddings):

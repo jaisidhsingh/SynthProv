@@ -4,18 +4,20 @@ from tqdm import tqdm
 
 
 # set up types of dissimilarity score per matcher
-def cosine_distance(f1, f2):
-    f1, f2 = f1/f1.norm(dim=-1, keepdim=True), f2/f2.norm(dim=-1, keepdim=True)
-    return f1 @ f2.T
+def cosine_distance(feature1, feature2):
+    f1, f2 = feature1.T / torch.norm(feature1, dim=1), feature2.T/torch.norm(feature2, dim=1)
+    f1, f2 = f1.T, f2.T
+    f1, f2 = f1.cpu(), f2.cpu()
+    cos = f1 @ f2.T
+    return (1 - cos).cpu()
 
 def euclidean_distance(f1, f2):
     f1, f2 = f1.T / torch.norm(f1, dim=1), f2.T/torch.norm(f2, dim=1)
-    # f1, f2 = f1.T.cpu(), f2.T.cpu()
     f1, f2 = f1.T, f2.T
     return torch.cdist(f1.unsqueeze(0), f2.unsqueeze(0)).squeeze(0)
 
 def id_comparison_score(cfg, f1, f2):
-    if cfg.matcher in ["ElasticArcFace+", "FaceNet"]:
+    if cfg.matcher in ["ElasticFace", "FaceNet"]:
         return euclidean_distance(f1, f2)
     else:
         return cosine_distance(f1, f2)
@@ -23,9 +25,9 @@ def id_comparison_score(cfg, f1, f2):
 
 def make_id_scores(cfg):
 	save_paths = [
-		os.path.join(cfg.helpers_dir, "comps2reals_id_scores.pt"),
-		os.path.join(cfg.helpers_dir, "comps2synths_id_scores.pt"),
-		os.path.join(cfg.helpers_dir, "synths2reals_id_scores.pt"),
+		os.path.join(cfg.helpers_dir, cfg.matcher, "comps2reals_id_scores.pt"),
+		os.path.join(cfg.helpers_dir, cfg.matcher, "comps2synths_id_scores.pt"),
+		os.path.join(cfg.helpers_dir, cfg.matcher, "synths2reals_id_scores.pt"),
 	]
 
 	if os.path.exists(save_paths[0]):
@@ -48,7 +50,7 @@ def make_id_scores(cfg):
 
 def make_unprojected_gan_scores(cfg):
 	save_paths = [
-        os.path.join(cfg.helpers_dir, "unprojected_synth2reals_gan_scores.pt"),
+		os.path.join(cfg.helpers_dir, "unprojected_synth2reals_gan_scores.pt"),
 		" "
 	]
     
@@ -69,48 +71,22 @@ def make_unprojected_gan_scores(cfg):
 
 def make_projected_gan_scores(cfg):
 	save_paths = [
-		os.path.join(cfg.helpers_dir, "projected_synth2reals_gan_scores.pt"),
-		os.path.join(cfg.helpers_dir, "costheta_with_id_direction.pt")
+		os.path.join(cfg.helpers_dir, "sintheta_synth2reals_gan_scores.pt"),
+		os.path.join(cfg.helpers_dir, "costhetas.pt")
 	]
 
 	if os.path.exists(save_paths[0]):
 		return save_paths
 	
 	else:
-		synth_latents = torch.load(cfg.synthetic_latents_path).cpu()
-		real_latents = torch.load(cfg.real_latents_path).cpu()
-		id_direction = torch.load(cfg.id_direction_path).cpu()
-
-		store = torch.zeros((synth_latents.shape[0], real_latents.shape[0]))
-		costhetas = torch.zeros((synth_latents.shape[0], real_latents.shape[0]))
-
-		old_i = 0
-		step = 10	
-		for i in tqdm(range(step, synth_latents.shape[0]+1, step)):
-			iis = [x for x in range(old_i, i)]
-			synth_latent = synth_latents[iis].view((step, 18, 512))
-
-			vectors = synth_latent.unsqueeze(1) - real_latents.unsqueeze(0)
-			vectors = vectors.view((synth_latent.shape[0], real_latents.shape[0], -1))
-
-			costheta = (vectors @ id_direction.view((1, -1)).T) / (vectors.norm(2) * id_direction.norm(2))
-			costheta = costheta.squeeze(2)
-
-			synth_latent = synth_latent.view((synth_latent.shape[0], -1))
-			real_latents = real_latents.view((real_latents.shape[0], -1))
-
-			distances = euclidean_distance(synth_latent.cuda(), real_latents.cuda())
-			projected_distance = distances.cuda() * costheta.cuda()
-
-			store[iis] = projected_distance.cpu()
-			costhetas[iis] = costheta.cpu()
-
-			real_latents = real_latents.view((70000, 18, 512))
-
-			old_i += step
-
-		torch.save(store, save_paths[0])
-		torch.save(costhetas, save_paths[1])
+		unprojected = torch.load(
+			os.path.join(cfg.helpers_dir, "unprojected_synth2reals_gan_scores.pt")
+		)
+		costhetas = torch.load(save_paths[1])
+		sinthetas = torch.sqrt(1 - costhetas**2)
+		projected = unprojected * sinthetas
+		print(projected.shape)
+		torch.save(projected, save_paths[0])
 
 		return save_paths
 

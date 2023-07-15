@@ -1,8 +1,8 @@
 from configs import configs as cfg
 from utils.get_results import *
-from utils.make_helpers import setup_helpers
-from synthprov.make_clusters import select_assistants, get_clusters
-from synthprov.mixed_scores import get_scores
+from utils.make_helpers import *
+from synthprov.make_clusters import *
+from synthprov.mixed_scores import *
 
 import torch
 import os
@@ -21,10 +21,7 @@ def run_synthprov(cfg):
 	id_helpers_paths, gan_helpers_paths = setup_helpers(cfg)
 	comps2synths_id_scores = torch.load(id_helpers_paths[1])
 	synths2reals_id_scores = torch.load(id_helpers_paths[2])
-	synths2reals_gan_scores = torch.load(gan_helpers_paths[0]) 
-	# **Note**: 
-	# 	costheta is at gan_helpers_paths[1] only if cfg.gan_score_mode == "projected"
-	#   else gan_helpers_paths[1] = " "
+	synths2reals_gan_scores = torch.load(gan_helpers_paths[0])
 
 	# load additional data
 	parents_data = torch.load(cfg.parents_list_path)['parents']
@@ -45,35 +42,20 @@ def run_synthprov(cfg):
 		comp2synths_id_scores = comps2synths_id_scores[i]
 
 		# get our assistants
-		assistant_indices = select_assistants(
+		assistant_indices, _ = select_assistants(
 			cfg,
 			parent_indices,
 			comp2synths_id_scores,
 			synthetic_embeddings
 		)
 
-		# get the clusters/families from the assistants
-		# clusters = get_clusters(
-		# 	cfg,
-		# 	parent_indices,
-		# 	parent_embeddings,
-		# 	assistant_indices,
-		# 	assistant_embeddings
-		# )
-
-		# get our mixed scores
-		# scores = get_scores(
-		# 	cfg,
-		# 	clusters,
-		# 	synths2reals_id_scores,
-		# 	synths2reals_gan_scores
-		# )
+		# construct mixed scores
 		scores = get_scores(
 			cfg,
 			parent_indices,
-			assistant_indices.tolist(),
+			assistant_indices,
 			synths2reals_id_scores,
-			synths2reals_gan_scores
+			synths2reals_gan_scores,
 		)
 		# store the scores
 		store[i] = scores

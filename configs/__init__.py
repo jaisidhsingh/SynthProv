@@ -1,4 +1,3 @@
-import torch
 from types import SimpleNamespace
 
 
@@ -6,23 +5,21 @@ from types import SimpleNamespace
 configs = SimpleNamespace(**{})
 
 # running configs
-configs.run_name = "ganprov_with_idd_0"
+configs.run_name = "ffhq_st_full_6"
 configs.version = 1
 
 # dataset, matcher and k configs
 configs.dataset = "ffhq"
-configs.matcher = "ElasticArcFace+"
-configs.k = 2
+configs.matcher = "ArcFace"
+configs.k = 6
 
 # number of composites to operate on
-configs.iterations = 3
+configs.iterations = 10000
 
 # how to use GAN space in our algorithm
-configs.gan_score_mode = "unprojected"
-configs.cumulate_mode = {
-    "global": torch.mean,
-    "family":  torch.min
-}
+configs.gan_score_mode = "projected" # keep this!
+configs.id_coeff = 1.0
+configs.w_coeff = 0.3
 
 # qualitative result configs
 configs.qualitative_topk = 5
@@ -30,8 +27,8 @@ configs.qualitative_queries = [0, 1, 2]
 
 # save configs
 configs.results_dir = f"../results/{configs.dataset}/{configs.matcher}"
-configs.helpers_dir = f"../helpers/{configs.dataset}/{configs.matcher}"
-
+configs.helpers_dir = f"../helpers/{configs.dataset}"
+configs.inference_dir = f"../inference/{configs.dataset}"
 
 
 # homefolder for dataset
@@ -56,5 +53,5 @@ configs.synthetic_image_folder = f"{configs.homefolder}/synthetic/synthetic_sour
 configs.real_image_folder = f"{configs.homefolder}/real/{configs.dataset}_data"
 
 # algorithm configs
-configs.num_assistants = 100
+configs.num_assistants = 10
 configs.parent_cluster_size = 5
